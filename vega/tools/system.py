@@ -1,0 +1,73 @@
+"""PC-control tools. Deliberately limited: an app allowlist, http(s) links only,
+and file search confined to your home folder. Nothing here deletes or edits files."""
+import os
+import platform
+import subprocess
+import threading
+import webbrowser
+from pathlib import Path
+
+from .registry import state, tool
+
+OS = platform.system()  # "Windows", "Darwin" or "Linux"
+# Add your own apps here. Only names in this list can ever be launched.
+APPS = {
+    "notepad": {"Windows": ["notepad"]},
+    "calculator": {"Windows": ["calc"], "Darwin": ["open", "-a", "Calculator"], "Linux": ["gnome-calculator"]},
+    "chrome": {"Windows": ["cmd", "/c", "start", "", "chrome"], "Darwin": ["open", "-a", "Google Chrome"], "Linux": ["google-chrome"]},
+    "vscode": {"Windows": ["cmd", "/c", "start", "", "code"], "Darwin": ["open", "-a", "Visual Studio Code"], "Linux": ["code"]},
+    "files": {"Windows": ["explorer"], "Darwin": ["open", "."], "Linux": ["xdg-open", "."]},
+}
+
+
+@tool
+def open_app(name: str) -> str:
+    """Open an allowed desktop app. Allowed: notepad, calculator, chrome, vscode, files."""
+    cmd = APPS.get(name.lower().strip(), {}).get(OS)
+    if not cmd:
+        return f"I'm not allowed to open '{name}'. Allowed: {', '.join(APPS)}."
+    subprocess.Popen(cmd)
+    return f"Opened {name}."
+
+
+@tool
+def open_website(url: str) -> str:
+    """Open a web page (http or https only) in the default browser."""
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+    webbrowser.open(url)
+    return f"Opened {url}."
+
+
+@tool
+def find_files(name: str, folder: str = "Documents") -> str:
+    """Find files whose name contains the text, inside a folder under the user's home (e.g. Documents, Downloads, Desktop)."""
+    home = Path.home().resolve()
+    root = (home / folder).resolve()
+    if home not in root.parents and root != home:
+        return "I can only search inside your home folder."
+    found, scanned = [], 0
+    for dirpath, dirs, files in os.walk(root):
+        dirs[:] = [d for d in dirs if not d.startswith(".")]
+        for f in files:
+            scanned += 1
+            if name.lower() in f.lower():
+                found.append(str(Path(dirpath) / f))
+        if len(found) >= 10 or scanned > 50000:
+            break
+    return "\n".join(found[:10]) or "No matching files."
+
+
+@tool
+def set_timer(seconds: int, label: str = "Timer") -> str:
+    """Set a timer that alerts the user when it finishes."""
+    t = threading.Timer(seconds, lambda: state["notify"](f"{label} is done."))
+    t.daemon = True
+    t.start()
+    return f"Timer set for {seconds} seconds."
+
+
+@tool
+def system_info() -> str:
+    """Describe the computer: OS, version and processor."""
+    return f"{platform.system()} {platform.release()}, {platform.processor() or platform.machine()}"
