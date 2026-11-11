@@ -18,12 +18,16 @@ APPS = {
     "chrome": {"Windows": ["cmd", "/c", "start", "", "chrome"], "Darwin": ["open", "-a", "Google Chrome"], "Linux": ["google-chrome"]},
     "vscode": {"Windows": ["cmd", "/c", "start", "", "code"], "Darwin": ["open", "-a", "Visual Studio Code"], "Linux": ["code"]},
     "files": {"Windows": ["explorer"], "Darwin": ["open", "."], "Linux": ["xdg-open", "."]},
+    "edge": {"Windows": ["cmd", "/c", "start", "", "msedge"]},
+    "paint": {"Windows": ["mspaint"]},
+    "settings": {"Windows": ["cmd", "/c", "start", "", "ms-settings:"]},
+    "task manager": {"Windows": ["taskmgr"]},
 }
 
 
 @tool
 def open_app(name: str) -> str:
-    """Open an allowed desktop app. Allowed: notepad, calculator, chrome, vscode, files."""
+    """Open an allowed desktop app. Allowed: notepad, calculator, chrome, edge, vscode, files, paint, settings, task manager."""
     cmd = APPS.get(name.lower().strip(), {}).get(OS)
     if not cmd:
         return f"I'm not allowed to open '{name}'. Allowed: {', '.join(APPS)}."
@@ -33,7 +37,8 @@ def open_app(name: str) -> str:
 
 @tool
 def open_website(url: str) -> str:
-    """Open a web page (http or https only) in the default browser."""
+    """Open a web page in the default browser. ONLY use this when the user explicitly asks to open or go to
+    a site. Never use it to answer questions or read news; use web_search or news_search for that."""
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
     webbrowser.open(url)

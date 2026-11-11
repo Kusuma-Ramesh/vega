@@ -3,3 +3,10 @@ __pycache__/
 *.pyc
 .venv/
 voice/*.wav
+# Google sign-in files (these normally live in ~/.vega, outside the project; this is a safety net)
+google_credentials*.json
+google_token*.json
+client_secret*.json
+token.json
+credentials.json
+.venv311/

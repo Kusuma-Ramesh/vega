@@ -38,9 +38,19 @@ def run_text(brain, voice=False, wake=False):
 
 def main():
     p = argparse.ArgumentParser(prog="vega", description="VEGA assistant")
-    p.add_argument("mode", nargs="?", default="web", choices=["text", "voice", "web"])
+    p.add_argument("mode", nargs="?", default="web", choices=["text", "voice", "web", "google-login", "clone-setup", "record-voice"])
     p.add_argument("--wake", action="store_true", help="voice mode: only respond after 'hey vega'")
     a = p.parse_args()
+
+    if a.mode == "google-login":
+        from .tools.google import login
+        return login()
+    if a.mode == "record-voice":
+        from .cloneutil import record
+        return record()
+    if a.mode == "clone-setup":
+        from .cloneutil import setup
+        return setup()
 
     if a.mode == "web":
         import uvicorn

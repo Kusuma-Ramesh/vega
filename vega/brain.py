@@ -4,7 +4,7 @@ the OpenAI-style API; Claude uses the Anthropic API."""
 from . import tools
 import json
 
-from .config import API_KEY, BASE_URL, MODEL, PROVIDER, SYSTEM
+from .config import API_KEY, BASE_URL, MODEL, PROVIDER, build_system
 
 
 class Brain:
@@ -28,7 +28,7 @@ class Brain:
         self._trim()
         for _ in range(8):  # safety cap on tool round-trips
             resp = self.client.messages.create(
-                model=MODEL, max_tokens=700, system=SYSTEM,
+                model=MODEL, max_tokens=900, system=build_system(),
                 tools=tools.schemas(), messages=self.messages,
             )
             self.messages.append({"role": "assistant", "content": resp.content})
@@ -54,7 +54,7 @@ class OpenAIBrain:
                 raise SystemExit(f"No API key found for '{PROVIDER}'. Add it to your .env file (see .env.example).")
             client = OpenAI(base_url=BASE_URL, api_key=API_KEY)
         self.client = client
-        self.messages = [{"role": "system", "content": SYSTEM}]
+        self.messages = [{"role": "system", "content": build_system()}]
         self.on_event = on_event or (lambda kind, data: None)
 
     @staticmethod
@@ -75,6 +75,7 @@ class OpenAIBrain:
                 self.messages.pop(1)
 
     def ask(self, text: str) -> str:
+        self.messages[0]["content"] = build_system()  # fresh date and memories every time
         self.messages.append({"role": "user", "content": text})
         self._trim()
         for _ in range(8):

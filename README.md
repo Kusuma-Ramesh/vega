@@ -107,6 +107,25 @@ browser handles speech.
 - There is deliberately **no shell or delete tool**. If you add one, require a yes/no confirmation first.
 - Notes live in `~/.vega/notes.txt`. Never commit your `.env`.
 
+## Indian languages
+
+Pick a language in the HUD dropdown (Hindi, Kannada, Telugu, Tamil, Malayalam, Marathi, Bengali, Gujarati,
+Punjabi, Urdu or English). Vega answers in the language you speak or type, in its own script. Speaking
+aloud uses a voice installed on your PC (Windows Settings > Time & language > Speech > Add voices).
+Hands-free: say "Hey Vega", pause, then speak in your chosen language. The cloned voice covers English
+and Hindi only (XTTS limit); other languages use the browser voice.
+
+## Gmail and Google Calendar (read-only)
+
+`pip install -r requirements-google.txt`, save your Google OAuth "Desktop app" JSON as
+`~/.vega/google_credentials.json`, then run `python -m vega google-login` once. Vega can then list and read
+unread mail and show calendar events. It cannot send, delete or change anything.
+
+## Voice clone steps
+
+`pip install -r requirements-clone.txt`, then `python -m vega record-voice`, then `python -m vega clone-setup`
+(accepts the XTTS licence and downloads the model once). Restart Vega.
+
 ## Ideas for what's next
 
 Calendar and email tools, a custom wake word, music control, a smarter memory (save facts between runs),

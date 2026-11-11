@@ -32,6 +32,6 @@ def run(name, args):
     if name not in TOOLS:
         return f"Unknown tool: {name}"
     try:
-        return str(TOOLS[name]["fn"](**args))
+        return str(TOOLS[name]["fn"](**args))[:6000]  # keep one tool result from flooding the model
     except Exception as e:  # tell Claude what broke instead of crashing
         return f"Tool error: {e}"
