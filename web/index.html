@@ -26,7 +26,7 @@ input{flex:1;background:transparent;border:0;border-bottom:1px solid var(--line)
 input:focus-visible,button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
 button{background:transparent;color:var(--star);border:1px solid var(--line);border-radius:999px;padding:8px 16px;font:inherit;cursor:pointer}
 button:hover{border-color:var(--cyan)}
-#mic[aria-pressed=true]{border-color:var(--gold);color:var(--gold)}
+#mic[aria-pressed=true],#hf[aria-pressed=true]{border-color:var(--gold);color:var(--gold)}
 @media(max-width:760px){body{grid-template-columns:1fr;grid-template-rows:38vh 1fr auto}
  #stage{grid-row:1}canvas{width:34vh;height:34vh}#state{bottom:1vh}aside{border:0;grid-row:2;padding-top:8px}form{grid-column:1}}
 </style>
@@ -35,13 +35,14 @@ button:hover{border-color:var(--cyan)}
 <div id="stage"><canvas id="c" width="900" height="900" aria-hidden="true"></canvas><div id="state" role="status">Click the mic or type to begin.</div></div>
 <aside><div id="log" aria-live="polite"></div></aside>
 <form id="f"><input id="t" placeholder="Ask Vega anything" autocomplete="off" aria-label="Message">
-<button type="button" id="mic" aria-pressed="false">Mic</button><button>Send</button></form>
+<button type="button" id="mic" aria-pressed="false">Mic</button><button type="button" id="hf" aria-pressed="false">Hands-free</button><button>Send</button></form>
 <script>
 const $=id=>document.getElementById(id), log=$("log"), stateEl=$("state");
 const COLORS={idle:"#e3ecff",listening:"#ffc46b",thinking:"#a394ff",speaking:"#6fe3ff"};
 const LABELS={idle:"Ready",listening:"Listening",thinking:"Thinking",speaking:"Speaking"};
 let mode="idle", ws, rec, micOn=false;
-const setMode=m=>{mode=m;stateEl.textContent=LABELS[m]};
+let always=false;
+const setMode=m=>{mode=m;stateEl.textContent=(m==="idle"&&always)?"Say \u201CHey Vega\u201D":LABELS[m]};
 const add=(cls,txt)=>{const d=document.createElement("div");d.className="m "+cls;d.textContent=txt;log.append(d);log.scrollTop=1e9};
 
 function connect(){
@@ -54,23 +55,46 @@ function connect(){
   ws.onclose=()=>{setMode("idle");stateEl.textContent="Disconnected. Restart Vega and refresh.";};
 }
 function send(text){if(!text||ws.readyState!==1)return;add("you",text);setMode("thinking");ws.send(JSON.stringify({text}))}
-function say(text){
-  speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);
-  u.onstart=()=>setMode("speaking");u.onend=()=>{setMode("idle");if(micOn)listen()};
+let cloneOn=false,greeting="",greeted=false;
+const greetOnce=()=>{if(greeting&&!greeted){greeted=true;say(greeting)}};
+async function say(text){
+  speechSynthesis.cancel();
+  if(cloneOn){try{
+    setMode("thinking");
+    const r=await fetch("/speak",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text})});
+    if(!r.ok)throw 0;
+    const a=new Audio(URL.createObjectURL(await r.blob()));
+    a.onplay=()=>setMode("speaking");a.onended=()=>{setMode("idle");if(micOn&&!always)startRec()};
+    return a.play();
+  }catch(e){}}
+  const u=new SpeechSynthesisUtterance(text);
+  u.onstart=()=>setMode("speaking");u.onend=()=>{setMode("idle");if(micOn&&!always)startRec()};
   speechSynthesis.speak(u);
 }
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-function listen(){
-  if(!SR){add("err","Voice input needs Chrome or Edge. You can still type.");micOn=false;return}
-  rec=new SR();rec.lang="en-US";
-  rec.onstart=()=>setMode("listening");
-  rec.onresult=e=>send(e.results[0][0].transcript);
-  rec.onerror=()=>{micOn=false;$("mic").setAttribute("aria-pressed","false");setMode("idle")};
-  rec.onend=()=>{if(mode==="listening")setMode("idle")};
+const WAKE=/\b(hey|hi|ok|okay)[ ,]+(vega|vegas|veda|vaiga)\b/i;
+let armed=0;
+function heard(t){  // hands-free: react only after the wake word
+  if(mode==="speaking"||mode==="thinking")return;
+  const m=t.match(WAKE);
+  if(m){const rest=t.slice(m.index+m[0].length).replace(/^[\s,.!?]+/,"");
+    if(rest)send(rest);else{armed=Date.now()+8000;setMode("listening")}}
+  else if(Date.now()<armed){armed=0;send(t)}
+}
+function startRec(){
+  if(!SR){add("err","Voice input needs Chrome or Edge. You can still type.");micOn=always=false;sync();return}
+  if(rec){rec.onend=null;try{rec.abort()}catch(e){}}
+  rec=new SR();rec.lang="en-US";rec.continuous=always;
+  rec.onstart=()=>{if(!always)setMode("listening")};
+  rec.onresult=e=>{const t=e.results[e.results.length-1][0].transcript.trim();always?heard(t):send(t)};
+  rec.onerror=ev=>{if(ev.error==="not-allowed"||ev.error==="service-not-allowed"){always=micOn=false;sync();setMode("idle");add("err","Microphone blocked. Allow it in Chrome's address bar, then try again.")}};
+  rec.onend=()=>{if(always)setTimeout(startRec,300);else if(mode==="listening")setMode("idle")};
   rec.start();
 }
-$("mic").onclick=()=>{micOn=!micOn;$("mic").setAttribute("aria-pressed",micOn);
-  if(micOn){speechSynthesis.cancel();listen()}else if(rec)rec.stop()};
+function sync(){$("mic").setAttribute("aria-pressed",micOn);$("hf").setAttribute("aria-pressed",always)}
+$("mic").onclick=()=>{micOn=!micOn;always=false;sync();speechSynthesis.cancel();micOn?startRec():(rec&&(rec.onend=null,rec.abort()),setMode("idle"))};
+$("hf").onclick=()=>{always=!always;micOn=false;sync();
+  if(always){greetOnce();startRec();setMode("idle")}else{if(rec){rec.onend=null;rec.abort()}setMode("idle")}};
 $("f").onsubmit=e=>{e.preventDefault();send($("t").value.trim());$("t").value=""};
 
 // The star: a four-point diffraction star with an orbiting ring. Colour and tempo follow the state.
@@ -99,6 +123,9 @@ function frame(t){
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);connect();
+fetch("/config").then(r=>r.json()).then(c=>{cloneOn=c.clone;
+  const hr=new Date().getHours(),part=hr<12?"morning":hr<17?"afternoon":"evening";
+  greeting=`Good ${part}${c.user?", "+c.user:""}. Vega online.`;add("vega",greeting)}).catch(()=>{});
 </script>
 </body>
 </html>

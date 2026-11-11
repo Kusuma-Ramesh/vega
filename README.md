@@ -12,7 +12,8 @@ open apps and find files, behind a glowing star interface in your browser.
 ## Quick start (Windows, Mac or Linux)
 
 1. Install **Python 3.10+** from python.org (on Windows, tick *Add Python to PATH*).
-2. Get an API key at <https://console.anthropic.com> (billed by usage, separate from a Claude chat plan).
+2. Get a **free** API key at <https://console.groq.com/keys> (no card needed). Prefer Google? Use a free
+   Gemini key from <https://aistudio.google.com/apikey>. See "Choosing a brain" below.
 3. In a terminal:
 
 ```bash
@@ -24,7 +25,7 @@ pip install -r requirements.txt
 copy .env.example .env            # Mac/Linux: cp .env.example .env
 ```
 
-4. Open `.env` and paste your key after `ANTHROPIC_API_KEY=`.
+4. Open `.env` and paste your key after `GROQ_API_KEY=`.
 5. Run it:
 
 ```bash
@@ -33,6 +34,36 @@ python -m vega text       # plain terminal chat
 python -m vega voice      # voice in the terminal (see "Terminal voice")
 python -m vega voice --wake   # only reacts after you say "hey vega"
 ```
+
+## Choosing a brain
+
+Set `VEGA_PROVIDER` in `.env`:
+
+| Provider | Cost | Key variable | Notes |
+|---|---|---|---|
+| `groq` (default) | Free tier | `GROQ_API_KEY` | Fast. Free limits are per day, so heavy use may pause until tomorrow. |
+| `gemini` | Free tier | `GEMINI_API_KEY` | If it errors about the model name, set `VEGA_MODEL` to a current free Gemini model. |
+| `ollama` | Free, offline | none | Install Ollama, run `ollama pull llama3.1`, then set `VEGA_PROVIDER=ollama`. Needs a decent PC. |
+| `anthropic` | Paid | `ANTHROPIC_API_KEY` | Claude. Needs prepaid credits. |
+
+Free tiers and model names change often. If a model is retired, pick another with `VEGA_MODEL`.
+The `stages/` scripts use the Anthropic API and are for learning only.
+
+## Hands-free and Jarvis mode
+
+Click **Hands-free** in the HUD (Chrome or Edge) and say "Hey Vega, ..." any time. Set `VEGA_USER=YourName`
+in `.env` so Vega addresses you by name. Extra PC tools: volume, media keys (play/pause/next) and screenshots
+(saved to Pictures). Windows only for volume and media.
+
+## Speak in your own voice (optional, free, local)
+
+1. Record 10 to 30 seconds of clean speech (no music or background noise) and save it as `voice/me.wav`.
+2. `pip install -r requirements-clone.txt` (big download). On first use it asks you to accept the XTTS
+   license in the terminal, then downloads the model.
+3. Restart Vega. If `voice/me.wav` exists, Vega speaks with your voice; otherwise it uses the browser voice.
+
+It runs on your CPU or GPU, so on a CPU each reply can take several seconds. Your recording never leaves
+your PC and is git-ignored. Only clone your own voice, or one you have permission to use.
 
 ## Built in five stages (learn by reading)
 

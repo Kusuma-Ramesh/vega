@@ -48,7 +48,7 @@ def main():
         uvicorn.run("vega.server:app", host="127.0.0.1", port=PORT, log_level="warning")
         return
 
-    from .brain import Brain
+    from .brain import make_brain
     from .tools import state
     state["notify"] = lambda m: print(f"\n[!] {m}")
-    run_text(Brain(), voice=a.mode == "voice", wake=a.wake)
+    run_text(make_brain(), voice=a.mode == "voice", wake=a.wake)

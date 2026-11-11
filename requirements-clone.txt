@@ -1,0 +1,2 @@
+# Optional: speak in your own voice (large download, ~2 GB; works best on Python 3.10-3.12)
+coqui-tts>=0.24

@@ -5,6 +5,7 @@ import platform
 import subprocess
 import threading
 import webbrowser
+from datetime import datetime
 from pathlib import Path
 
 from .registry import state, tool
@@ -71,3 +72,42 @@ def set_timer(seconds: int, label: str = "Timer") -> str:
 def system_info() -> str:
     """Describe the computer: OS, version and processor."""
     return f"{platform.system()} {platform.release()}, {platform.processor() or platform.machine()}"
+
+
+def _press(vk, times=1):
+    """Tap a Windows media/volume key."""
+    if OS != "Windows":
+        return False
+    import ctypes
+    for _ in range(times):
+        ctypes.windll.user32.keybd_event(vk, 0, 0, 0)
+        ctypes.windll.user32.keybd_event(vk, 0, 2, 0)
+    return True
+
+
+@tool
+def volume(action: str, steps: int = 5) -> str:
+    """Change the system volume. action is up, down or mute. Each step is about 2 percent."""
+    vk = {"up": 0xAF, "down": 0xAE, "mute": 0xAD}.get(action)
+    if not vk:
+        return "action must be up, down or mute."
+    return "Done." if _press(vk, 1 if action == "mute" else steps) else "Volume control works on Windows only."
+
+
+@tool
+def media(action: str) -> str:
+    """Control music or video playback. action is play_pause, next or previous."""
+    vk = {"play_pause": 0xB3, "next": 0xB0, "previous": 0xB1}.get(action)
+    if not vk:
+        return "action must be play_pause, next or previous."
+    return "Done." if _press(vk) else "Media keys work on Windows only."
+
+
+@tool
+def screenshot() -> str:
+    """Take a screenshot of the screen and save it in the Pictures folder."""
+    from PIL import ImageGrab
+    path = Path.home() / "Pictures" / f"vega-{datetime.now():%Y%m%d-%H%M%S}.png"
+    path.parent.mkdir(exist_ok=True)
+    ImageGrab.grab().save(path)
+    return f"Saved to {path}"

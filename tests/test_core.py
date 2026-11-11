@@ -24,3 +24,14 @@ def test_brain_tool_loop():
     ])
     client = NS(messages=NS(create=lambda **kw: next(calls)))
     assert Brain(client=client).ask("time?") == "It is time."
+
+
+def test_openai_brain_tool_loop():
+    from vega.brain import OpenAIBrain
+    call = NS(id="c1", function=NS(name="get_time", arguments="{}"))
+    replies = iter([NS(tool_calls=[call], content=None), NS(tool_calls=None, content="Noon.")])
+    create = lambda **kw: NS(choices=[NS(message=next(replies))])
+    client = NS(chat=NS(completions=NS(create=create)))
+    b = OpenAIBrain(client=client)
+    assert b.ask("time?") == "Noon."
+    assert [m["role"] for m in b.messages] == ["system", "user", "assistant", "tool", "assistant"]
